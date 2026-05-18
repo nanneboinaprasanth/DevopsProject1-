@@ -1,68 +1,184 @@
 # Configuration Reference
 
-Detailed configuration options for all components.
+This file lists the main settings that should be reviewed before running the Terraform, Ansible, Jenkins, Docker, and Kubernetes parts of the project.
 
-## Terraform Configuration
+## Terraform
 
-### Variables
+Terraform configuration is stored in `terraform/`.
+
+### Main Variables
 
 | Variable | Type | Default | Description |
-|----------|------|---------|-------------|
-| `region` | string | ap-south-1 | AWS region |
-| `environment` | string | dev | Environment name |
-| `instance_type` | string | t2.micro | EC2 instance type |
-| `instance_count` | number | 1 | Number of instances |
+| --- | --- | --- | --- |
+| `region` | string | `ap-south-1` | AWS region for resource deployment. |
+| `environment` | string | `dev` | Environment name. Allowed values: `dev`, `stg`, `prod`. |
+| `instance_type` | string | `t2.micro` | EC2 instance type for the Jenkins server. |
+| `instance_count` | number | `1` | Number of Jenkins EC2 instances. |
+| `ssh_cidr` | string | `0.0.0.0/0` | CIDR allowed to access SSH. Restrict this for real deployments. |
+| `enable_monitoring` | bool | `true` | Enables CloudWatch monitoring resources. |
+| `enable_detailed_monitoring` | bool | `false` | Enables detailed EC2 monitoring. |
+| `enable_ebs_optimization` | bool | `false` | Enables EBS optimization where supported. |
+| `root_volume_size` | number | `20` | Root volume size in GB. |
+| `root_volume_type` | string | `gp3` | Root EBS volume type. |
+| `tags` | map(string) | project defaults | Common tags applied to AWS resources. |
 
-### Security Group Rules
+### Example Variable File
 
-- Inbound: TCP 22 (SSH)
-- Inbound: TCP 8080 (Jenkins)
-- Inbound: TCP 80 (HTTP)
-- Inbound: TCP 443 (HTTPS)
-- Outbound: All traffic allowed
+Use one of the sample tfvars files as a starting point:
 
-## Ansible Configuration
+```bash
+cd terraform
+terraform plan -var-file="terraform.tfvars.staging"
+terraform apply -var-file="terraform.tfvars.staging"
+```
+
+Do not commit real secrets or private keys in tfvars files.
+
+### Security Settings
+
+Review `terraform/security.tf` before deploying:
+
+- SSH access uses `var.ssh_cidr`.
+- Jenkins UI uses TCP `8080`.
+- HTTP and HTTPS use TCP `80` and `443`.
+- Outbound traffic is currently open.
+
+For production, set `ssh_cidr` to your own IP range instead of `0.0.0.0/0`.
+
+## Ansible
+
+Ansible configuration is stored in `ansible/`.
 
 ### Inventory
 
+Update `ansible/inventory` with the Jenkins server details after Terraform creates the instance.
+
+Example:
+
 ```ini
 [jenkins]
-jenkins_server ansible_host=<IP> ansible_user=ubuntu
+jenkins_server ansible_host=<JENKINS_PUBLIC_IP> ansible_user=ubuntu
 
 [jenkins:vars]
+ansible_python_interpreter=/usr/bin/python3
 docker_version=latest
+docker_users=jenkins
+enable_docker_service=true
+docker_package=docker
+docker_service=docker
 ```
 
-## Kubernetes Configuration
+### Ansible Defaults
 
-### Namespace
+`ansible/ansible.cfg` sets:
 
-```yaml
-name: devops
-environment: production
+- `inventory = ./inventory`
+- `host_key_checking = False`
+- SSH connection reuse and pipelining
+- command timeout
+
+## Jenkins
+
+Jenkins pipeline configuration is stored in `jenkins/Jenkinsfile`.
+
+### Required Updates
+
+Replace these placeholders before running the pipeline:
+
+| Setting | Current Placeholder | Replace With |
+| --- | --- | --- |
+| `DOCKER_USER` | `yourdockerhubusername` | Your Docker Hub username or registry namespace. |
+| Git URL | `https://github.com/yourusername/end-to-end-devops-project.git` | This repository URL. |
+| Image tag | `v1` | Keep `v1` or change to your release/versioning strategy. |
+
+### Jenkins Agent Requirements
+
+The Jenkins agent must have:
+
+- Docker installed and running.
+- Docker registry login or Jenkins credentials configured.
+- `kubectl` installed.
+- Kubernetes kubeconfig access for the target cluster.
+
+## Docker
+
+Application container configuration is stored in `app/`.
+
+### Image
+
+The app image is built from:
+
+```text
+app/Dockerfile
 ```
 
-### Deployment Specs
+The Jenkinsfile currently builds:
 
-- Image: yourdockerhubusername/devops-project:v1
-- Replicas: 2
-- Resource Limits: CPU 500m, Memory 512Mi
-- Resource Requests: CPU 250m, Memory 256Mi
+```text
+$DOCKER_USER/devops-project:v1
+```
 
-### Health Probes
+The image in `kubernetes/deployment.yml` must match the image pushed by Jenkins.
 
-- Liveness: HTTP GET /, 10s initial delay, 30s period
-- Readiness: HTTP GET /, 5s initial delay, 10s period
+### Local Run
 
-### Service
+If using Docker Compose:
 
-- Type: LoadBalancer
-- Port: 80
-- Target Port: 80
+```bash
+cd app
+docker compose up --build
+```
 
-### HPA
+## Kubernetes
 
-- Min Replicas: 2
-- Max Replicas: 10
-- CPU Target: 70%
-- Memory Target: 80%
+Kubernetes manifests are stored in `kubernetes/`.
+
+### Core Manifests
+
+| File | Purpose |
+| --- | --- |
+| `deployment.yml` | Runs the app pods. |
+| `service.yml` | Exposes the app on port `80`. |
+| `ingress.yml` | Routes HTTP traffic to the service. |
+
+### Supporting Manifests
+
+| File | Purpose |
+| --- | --- |
+| `namespace.yml` | Defines the `devops` namespace. |
+| `configmap.yml` | Stores non-secret app configuration. |
+| `hpa.yml` | Autoscaling configuration. |
+| `pdb.yml` | Pod disruption budget. |
+| `secrets.yml.example` | Template for Kubernetes secrets. |
+
+### Current App Deployment Values
+
+| Setting | Value |
+| --- | --- |
+| Deployment name | `devops-deployment` |
+| App label | `devops-app` |
+| Container name | `devops-container` |
+| Container port | `80` |
+| Replicas | `2` |
+| Service type | `LoadBalancer` |
+| Service port | `80` |
+| Image | `yourdockerhubusername/devops-project:v1` |
+
+### HPA Values
+
+| Setting | Value |
+| --- | --- |
+| Min replicas | `2` |
+| Max replicas | `10` |
+| CPU target | `70%` |
+| Memory target | `80%` |
+
+## Secrets
+
+Do not commit real secret values. Store sensitive data in:
+
+- Jenkins credentials for Docker Hub and kubeconfig.
+- AWS credential profiles, environment variables, or a secure CI secret store.
+- Kubernetes `Secret` objects created from private local files.
+
+Use `kubernetes/secrets.yml.example` only as a template.
