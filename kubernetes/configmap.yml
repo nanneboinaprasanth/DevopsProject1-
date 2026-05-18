@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: devops-config
+  namespace: devops
+data:
+  APP_ENV: "production"
+  LOG_LEVEL: "info"
+  DEBUG: "false"
+  app-config.json: |
+    {
+      "app_name": "devops-project",
+      "version": "v1"
+    }
