@@ -1,0 +1,19 @@
+# Staging Environment Configuration
+region                    = "ap-south-1"
+environment               = "stg"
+instance_type             = "t2.small"
+instance_count            = 2
+enable_monitoring         = true
+enable_ebs_optimization   = true
+enable_detailed_monitoring = true
+root_volume_size          = 30
+root_volume_type          = "gp3"
+ssh_cidr                  = "0.0.0.0/0"
+
+tags = {
+  Environment = "staging"
+  Owner       = "DevOps Team"
+  CostCenter  = "Engineering"
+  Project     = "DevOps"
+  ManagedBy   = "Terraform"
+}

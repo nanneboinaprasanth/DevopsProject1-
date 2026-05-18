@@ -1,0 +1,21 @@
+# Production Environment Configuration
+region                    = "ap-south-1"
+environment               = "prod"
+instance_type             = "t2.medium"
+instance_count            = 3
+enable_monitoring         = true
+enable_ebs_optimization   = true
+enable_detailed_monitoring = true
+root_volume_size          = 50
+root_volume_type          = "gp3"
+ssh_cidr                  = "YOUR_OFFICE_IP/32"  # Restrict to office IP only
+
+tags = {
+  Environment = "production"
+  Owner       = "DevOps Team"
+  CostCenter  = "Engineering"
+  Project     = "DevOps"
+  ManagedBy   = "Terraform"
+  Backup      = "daily"
+  Compliance  = "required"
+}

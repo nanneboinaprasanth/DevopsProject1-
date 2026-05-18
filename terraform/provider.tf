@@ -6,6 +6,15 @@ terraform {
       version = "~> 5.0"
     }
   }
+
+  # Uncomment and configure S3 backend for remote state
+  # backend "s3" {
+  #   bucket         = "your-terraform-state-bucket"
+  #   key            = "devops-project/terraform.tfstate"
+  #   region         = "ap-south-1"
+  #   encrypt        = true
+  #   dynamodb_table = "terraform-locks"
+  # }
 }
 
 provider "aws" {
@@ -23,6 +32,7 @@ locals {
       Environment = var.environment
       Project     = "DevOps"
       CreatedBy   = "Terraform"
+      CreatedAt   = timestamp()
     }
   )
 }

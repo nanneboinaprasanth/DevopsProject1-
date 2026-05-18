@@ -1,0 +1,19 @@
+# Development Environment Configuration
+region                    = "ap-south-1"
+environment               = "dev"
+instance_type             = "t2.micro"
+instance_count            = 1
+enable_monitoring         = true
+enable_ebs_optimization   = false
+enable_detailed_monitoring = false
+root_volume_size          = 20
+root_volume_type          = "gp3"
+ssh_cidr                  = "0.0.0.0/0"  # Change to your IP for security
+
+tags = {
+  Environment = "dev"
+  Owner       = "DevOps Team"
+  CostCenter  = "Engineering"
+  Project     = "DevOps"
+  ManagedBy   = "Terraform"
+}
