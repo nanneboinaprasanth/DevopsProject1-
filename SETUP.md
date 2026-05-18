@@ -1,121 +1,196 @@
 # Setup Guide
 
-Complete setup instructions for the End-to-End DevOps Project.
+This guide walks through the basic setup for the DevopsProject1 repository: provision AWS infrastructure, configure the Jenkins host, build the app image, and deploy to Kubernetes.
 
 ## Prerequisites
 
-Ensure you have the following tools installed:
+Install and configure these tools before starting:
 
-- **Terraform** (v1.0+): Infrastructure provisioning
-- **Ansible** (2.9+): Configuration management
-- **Docker** (20.10+): Container runtime
-- **kubectl** (v1.20+): Kubernetes CLI
-- **AWS CLI** (v2): AWS credential management
-- **Git**: Version control
+- Git
+- Terraform 1.0 or newer
+- AWS CLI v2
+- Ansible
+- Docker
+- Docker Compose
+- kubectl
+- Jenkins with Docker and kubectl access
 
-### Installation
+You also need:
 
-#### macOS
+- An AWS account and credentials.
+- A Docker Hub account or another container registry.
+- Access to a Kubernetes cluster.
+- SSH access to the Jenkins EC2 instance after Terraform creates it.
+
+## 1. Clone The Repository
+
 ```bash
-brew install terraform ansible docker kubectl awscli
+git clone https://github.com/nanneboinaprasanth/DevopsProject1-.git
+cd DevopsProject1-
 ```
 
-#### Ubuntu/Debian
-```bash
-sudo apt-get update
-sudo apt-get install -y terraform ansible docker.io kubectl awscli
-```
+## 2. Configure AWS
 
-#### Windows
-```powershell
-choco install terraform ansible docker kubectl awscli
-```
-
-## Setup Steps
-
-### 1. AWS Configuration
-
-Configure AWS credentials:
 ```bash
 aws configure
-# Enter your AWS Access Key ID
-# Enter your AWS Secret Access Key
-# Enter default region: ap-south-1
-# Enter default output format: json
 ```
 
-### 2. Terraform Setup
+Use the same region that Terraform uses. The default project region is:
+
+```text
+ap-south-1
+```
+
+## 3. Provision Infrastructure With Terraform
 
 ```bash
 cd terraform
-
-# Copy and configure variables
-cp terraform.tfvars.example terraform.tfvars
-# Edit terraform.tfvars with your values
-
-# Initialize Terraform
 terraform init
-
-# Plan infrastructure
-terraform plan -out=tfplan
-
-# Apply configuration
-terraform apply tfplan
-
-# Save outputs
-terraform output > outputs.txt
+terraform plan -var-file="terraform.tfvars.example"
+terraform apply -var-file="terraform.tfvars.example"
 ```
 
-**Note:** Save the Jenkins server's public IP from outputs for Ansible configuration.
-
-### 3. Ansible Configuration
+For staging or production-style values, review and use:
 
 ```bash
-cd ansible
+terraform.tfvars.staging
+terraform.tfvars.prod
+```
 
-# Update inventory with Jenkins server details
-nano inventory
+After apply completes, note the Jenkins public IP:
 
-# Run playbook
-ansible-playbook -i inventory install-docker.yml -vv
+```bash
+terraform output
+```
 
-# Verify Docker installation
+## 4. Configure The Jenkins Host With Ansible
+
+Update `ansible/inventory` with the Jenkins EC2 public IP.
+
+Example:
+
+```ini
+[jenkins]
+jenkins_server ansible_host=<JENKINS_PUBLIC_IP> ansible_user=ubuntu
+```
+
+Then run:
+
+```bash
+cd ../ansible
+ansible-playbook -i inventory install-docker.yml
+```
+
+Verify Docker:
+
+```bash
 ansible -i inventory jenkins -m shell -a "docker --version"
 ```
 
-### 4. Docker Image Build
+## 5. Build And Test The App Locally
 
 ```bash
-cd app
-
-# Build Docker image
-docker build -t yourdockerhubusername/devops-project:v1 .
-
-# Test locally with docker-compose
-docker-compose up -d
+cd ../app
+docker build -t devops-project:v1 .
 ```
 
-### 5. Kubernetes Deployment
+If using Docker Compose:
 
 ```bash
-cd kubernetes
+docker compose up --build
+```
 
-kubectl apply -f namespace.yml
-kubectl apply -f configmap.yml -n devops
-kubectl apply -f deployment.yml -n devops
-kubectl apply -f service.yml -n devops
-kubectl apply -f ingress.yml -n devops
-kubectl apply -f hpa.yml -n devops
+## 6. Update Jenkins And Kubernetes Image Values
+
+Before running Jenkins, replace placeholder values.
+
+In `jenkins/Jenkinsfile`:
+
+```text
+DOCKER_USER = "yourdockerhubusername"
+git 'https://github.com/yourusername/end-to-end-devops-project.git'
+```
+
+Use your Docker Hub username and this repository URL:
+
+```text
+https://github.com/nanneboinaprasanth/DevopsProject1-.git
+```
+
+In `kubernetes/deployment.yml`, update the image:
+
+```text
+yourdockerhubusername/devops-project:v1
+```
+
+It must match the image Jenkins builds and pushes.
+
+## 7. Configure Jenkins
+
+Create or configure a Jenkins pipeline job that uses:
+
+```text
+jenkins/Jenkinsfile
+```
+
+Make sure the Jenkins agent has:
+
+- Docker installed and permission to run Docker commands.
+- Docker registry credentials.
+- kubectl installed.
+- kubeconfig access to the Kubernetes cluster.
+
+## 8. Deploy To Kubernetes
+
+You can deploy all manifests together:
+
+```bash
+kubectl apply -f kubernetes/
+```
+
+Or apply the key manifests in order:
+
+```bash
+kubectl apply -f kubernetes/namespace.yml
+kubectl apply -f kubernetes/configmap.yml
+kubectl apply -f kubernetes/deployment.yml
+kubectl apply -f kubernetes/service.yml
+kubectl apply -f kubernetes/ingress.yml
+kubectl apply -f kubernetes/hpa.yml
+kubectl apply -f kubernetes/pdb.yml
+```
+
+Check the deployment:
+
+```bash
+kubectl get pods
+kubectl get svc
+kubectl get ingress
 ```
 
 ## Verification Checklist
 
-- [ ] Terraform state created successfully
-- [ ] EC2 instance running
-- [ ] Docker installed on Jenkins server
-- [ ] Docker image built and pushed
-- [ ] Kubernetes cluster accessible
-- [ ] All pods running
-- [ ] Service LoadBalancer working
-- [ ] Ingress routing correctly
-- [ ] Jenkins pipeline executing
+- Terraform initialized successfully.
+- AWS resources were created.
+- Jenkins EC2 public IP is available.
+- Ansible can connect to the Jenkins host.
+- Docker is installed on the Jenkins host.
+- Jenkins can build and push the Docker image.
+- Kubernetes manifests apply successfully.
+- Pods are running.
+- Service or ingress exposes the app.
+
+## Cleanup
+
+To remove AWS infrastructure created by Terraform:
+
+```bash
+cd terraform
+terraform destroy
+```
+
+Delete Kubernetes resources if needed:
+
+```bash
+kubectl delete -f kubernetes/
+```
