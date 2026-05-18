@@ -1,0 +1,62 @@
+# Terraform
+*.tfstate
+*.tfstate.*
+*.tfvars
+!terraform.tfvars.example
+.terraform/
+.terraform.lock.hcl
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Ansible
+*.retry
+.ansible_vault_pass
+
+# Docker
+.env
+.env.local
+*.log
+node_modules/
+dist/
+build/
+
+# Jenkins
+.DS_Store
+*.iml
+*.idea/
+
+# Kubernetes
+*.kubeconfig
+secrets.yml
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.pydevproject
+
+# OS
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+
+# General
+.env
+.env.local
+credentials.json
+secrets/
