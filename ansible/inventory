@@ -1,0 +1,11 @@
+[jenkins]
+# Add your Jenkins server details here
+# Example: jenkins_server ansible_host=<IP> ansible_user=ubuntu
+
+[jenkins:vars]
+ansible_python_interpreter=/usr/bin/python3
+docker_version=latest
+docker_users=jenkins
+enable_docker_service=true
+docker_package=docker
+docker_service=docker
