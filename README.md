@@ -1,88 +1,97 @@
-# End-to-End DevOps Project
+# DevopsProject1
 
-This repository contains a complete DevOps infrastructure setup demonstrating modern practices for application deployment, orchestration, and infrastructure automation.
+End-to-end DevOps project for provisioning infrastructure, configuring a Jenkins host, building a Dockerized web app, and deploying it to Kubernetes.
 
-## 📁 Project Structure
+## Project Structure
 
-### `ansible/`
-Infrastructure automation and configuration management scripts
-- **`install-docker.yml`** - Ansible playbook for automated Docker installation and setup on target hosts
-- **`inventory`** - Hosts inventory file for Ansible defining the target machines and groups
+```text
+.
+|-- ansible/      # Server configuration and Docker setup
+|-- app/          # Simple Nginx web app and Docker assets
+|-- jenkins/      # Jenkins CI/CD pipeline
+|-- kubernetes/   # Kubernetes deployment, service, ingress, and supporting manifests
+|-- terraform/    # AWS infrastructure as code
+```
 
-### `app/`
-Application source code and containerization
-- **`Dockerfile`** - Docker image definition for building the application container
-- **`index.html`** - Frontend web page serving as the application interface
+## What Is Included
 
-### `jenkins/`
-CI/CD pipeline configuration
-- **`Jenkinsfile`** - Jenkins pipeline definition for automated build, test, and deployment workflows
+### Ansible
 
-### `kubernetes/`
-Container orchestration and deployment configurations
-- **`deployment.yml`** - Kubernetes deployment manifest defining application pods and replicas
-- **`service.yml`** - Kubernetes service manifest for network exposure and load balancing
-- **`ingress.yml`** - Kubernetes ingress manifest for external HTTP(S) routing
+- `ansible.cfg` configures Ansible defaults.
+- `inventory` defines the Jenkins host group and host variables.
+- `install-docker.yml` installs and starts Docker on the Jenkins server.
 
-### `terraform/`
-Infrastructure as Code for cloud resource provisioning
-- **`main.tf`** - Primary Terraform configuration defining cloud resources
-- **`variables.tf`** - Input variables for Terraform configurations
-- **`outputs.tf`** - Output values from Terraform state (endpoints, IPs, etc.)
+### App
 
-## 🚀 Technology Stack
+- `index.html` is the sample web page.
+- `Dockerfile` builds an Nginx image for the app.
+- `.dockerignore` excludes unnecessary files from Docker builds.
+- `docker-compose.yml` can run the app locally with Docker Compose.
 
-- **Configuration Management:** Ansible
-- **Containerization:** Docker
-- **CI/CD:** Jenkins
-- **Container Orchestration:** Kubernetes
-- **Infrastructure as Code:** Terraform
-- **Frontend:** HTML
+### Jenkins
 
-## 📋 How to Use
+- `Jenkinsfile` defines the CI/CD pipeline:
+  - clone the repository
+  - build the Docker image
+  - push the image to Docker Hub
+  - deploy Kubernetes manifests
 
-1. **Setup Infrastructure:** Use Terraform to provision cloud resources
+Update the placeholder Docker Hub and GitHub values before running the pipeline.
+
+### Kubernetes
+
+- `deployment.yml` deploys the app container.
+- `service.yml` exposes the app service.
+- `ingress.yml` configures HTTP routing.
+- `namespace.yml`, `configmap.yml`, `hpa.yml`, `pdb.yml`, and `secrets.yml.example` provide supporting production-style configuration.
+
+### Terraform
+
+- `provider.tf` configures Terraform and the AWS provider.
+- `main.tf` provisions the Jenkins EC2 instance and related resources.
+- `security.tf` creates security group and IAM resources.
+- `variables.tf` defines configurable inputs.
+- `outputs.tf` prints useful deployment outputs.
+- `backend.tf` contains backend configuration guidance.
+- `terraform.tfvars.example`, `terraform.tfvars.staging`, and `terraform.tfvars.prod` provide environment examples.
+
+## Basic Workflow
+
+1. Provision infrastructure:
+
    ```bash
    cd terraform
+   terraform init
    terraform plan
    terraform apply
    ```
 
-2. **Configure Hosts:** Use Ansible to install and configure Docker on provisioned instances
+2. Configure the Jenkins server:
+
    ```bash
    cd ansible
    ansible-playbook -i inventory install-docker.yml
    ```
 
-3. **Build Application:** Docker image is built as part of the CI/CD pipeline
+3. Build the app image locally if needed:
+
    ```bash
    cd app
-   docker build -t myapp:latest .
+   docker build -t devops-project:v1 .
    ```
 
-4. **Deploy to Kubernetes:** Apply Kubernetes manifests to your cluster
+4. Deploy to Kubernetes:
+
    ```bash
-   cd kubernetes
-   kubectl apply -f deployment.yml
-   kubectl apply -f service.yml
-   kubectl apply -f ingress.yml
+   kubectl apply -f kubernetes/
    ```
 
-5. **Setup CI/CD:** Configure Jenkins with the provided Jenkinsfile for automated pipelines
+5. Configure Jenkins to use `jenkins/Jenkinsfile` for automated build and deployment.
 
-## 🔄 DevOps Workflow
+## Before Running
 
-This project demonstrates a complete DevOps pipeline:
-1. Code changes trigger Jenkins pipelines
-2. Jenkins builds Docker containers
-3. Terraform provisions infrastructure
-4. Ansible configures servers
-5. Kubernetes orchestrates containerized applications
-6. Services are exposed via Ingress
-
-## 📝 Notes
-
-- Ensure all required tools (Terraform, Ansible, Docker, kubectl) are installed
-- Configure appropriate cloud credentials for Terraform
-- Update inventory and variable files with your environment details
-- Review security configurations before deploying to production
+- Replace placeholder Docker Hub and GitHub values in the Jenkins and Kubernetes files.
+- Configure AWS credentials for Terraform.
+- Update Ansible `inventory` with your Jenkins server IP and SSH user.
+- Ensure Jenkins has access to Docker, Docker Hub credentials, and a valid Kubernetes kubeconfig.
+- Review security settings before using this in production.
